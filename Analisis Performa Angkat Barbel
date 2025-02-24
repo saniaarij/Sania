@@ -1,0 +1,78 @@
+title: "Analisis Performa Angkat Barbel"
+author: "Sania Arij Ashari"
+date: "`(24/02/2025)`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Memuat Data
+
+```{r load-data}
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(randomForest)
+
+# Mengunduh dataset
+train_url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+test_url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+training <- read.csv(url(train_url), na.strings = c("NA", "", "#DIV/0!"))
+testing <- read.csv(url(test_url), na.strings = c("NA", "", "#DIV/0!"))
+```
+
+## 2. Membersihkan Data
+
+```{r clean-data}
+# Menghapus kolom yang sebagian besar NA
+training <- training[, colSums(is.na(training)) == 0]
+testing <- testing[, colSums(is.na(testing)) == 0]
+
+# Menghapus kolom ID yang tidak diperlukan
+training <- training[,-c(1:7)]
+testing <- testing[,-c(1:7)]
+
+# Pastikan variabel target `classe` adalah faktor
+training$classe <- as.factor(training$classe)
+```
+
+## 3. Eksplorasi Data
+
+```{r explore-data}
+summary(training)
+ggplot(training, aes(x = classe)) + geom_bar(fill = "steelblue") +
+    ggtitle("Distribusi Kelas pada Data Latihan")
+```
+
+## 4. Membagi Data Latihan dan Validasi
+
+```{r split-data}
+set.seed(123)
+inTrain <- createDataPartition(training$classe, p = 0.7, list = FALSE)
+trainSet <- training[inTrain, ]
+validSet <- training[-inTrain, ]
+```
+
+## 5. Melatih Model dengan Random Forest
+
+```{r train-model}
+set.seed(123)
+model_rf <- randomForest(classe ~ ., data = trainSet, importance = TRUE, ntree = 100)
+```
+
+## 6. Evaluasi Model
+
+```{r evaluate-model}
+predictions <- predict(model_rf, validSet)
+conf_matrix <- confusionMatrix(predictions, validSet$classe)
+conf_matrix
+```
+
+## 7. Prediksi pada Data Uji
+
+```{r predict-test}
+predictions_test <- predict(model_rf, testing)
+predictions_test
